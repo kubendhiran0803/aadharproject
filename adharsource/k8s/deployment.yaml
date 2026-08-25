@@ -1,0 +1,20 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: adharsource
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: adharsource
+  template:
+    metadata:
+      labels:
+        app: adharsource
+    spec:
+      containers:
+        - name: adharsource
+          image: adharsource:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 80
