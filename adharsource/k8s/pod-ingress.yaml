@@ -1,0 +1,114 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: pod1-config
+data:
+  index.html: |
+    <html>
+      <head><title>Pod 1</title></head>
+      <body>
+        <h1>nginx pod1</h1>
+      </body>
+    </html>
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: pod2-config
+data:
+  index.html: |
+    <html>
+      <head><title>Pod 2</title></head>
+      <body>
+        <h1>nginx pod2</h1>
+      </body>
+    </html>
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: common-pod1
+  labels:
+    app: app1
+spec:
+  containers:
+  - name: nginx
+    image: nginx:alpine
+    ports:
+    - containerPort: 80
+    volumeMounts:
+    - name: html-volume
+      mountPath: /usr/share/nginx/html
+  volumes:
+  - name: html-volume
+    configMap:
+      name: pod1-config
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: common-pod2
+  labels:
+    app: app2
+spec:
+  containers:
+  - name: nginx
+    image: nginx:alpine
+    ports:
+    - containerPort: 80
+    volumeMounts:
+    - name: html-volume
+      mountPath: /usr/share/nginx/html
+  volumes:
+  - name: html-volume
+    configMap:
+      name: pod2-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: service-app1
+spec:
+  selector:
+    app: app1
+  ports:
+  - protocol: TCP
+    port: 80
+    targetPort: 80
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: service-app2
+spec:
+  selector:
+    app: app2
+  ports:
+  - protocol: TCP
+    port: 80
+    targetPort: 80
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: dual-path-ingress
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+spec:
+  rules:
+  - http:
+      paths:
+      - path: /path1
+        pathType: Prefix
+        backend:
+          service:
+            name: service-app1
+            port:
+              number: 80
+      - path: /path2
+        pathType: Prefix
+        backend:
+          service:
+            name: service-app2
+            port:
+              number: 80
