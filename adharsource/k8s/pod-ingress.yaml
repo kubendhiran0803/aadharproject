@@ -29,7 +29,7 @@ kind: Pod
 metadata:
   name: common-pod1
   labels:
-    app: app1
+    app: app11
 spec:
   containers:
   - name: nginx
@@ -49,7 +49,7 @@ kind: Pod
 metadata:
   name: common-pod2
   labels:
-    app: app2
+    app: app22
 spec:
   containers:
   - name: nginx
@@ -70,7 +70,7 @@ metadata:
   name: service-app1
 spec:
   selector:
-    app: app1
+    app: app11
   ports:
   - protocol: TCP
     port: 80
@@ -82,7 +82,7 @@ metadata:
   name: service-app2
 spec:
   selector:
-    app: app2
+    app: app22
   ports:
   - protocol: TCP
     port: 80
