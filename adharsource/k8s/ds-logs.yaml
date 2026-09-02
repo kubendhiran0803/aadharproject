@@ -1,0 +1,88 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: fluentd-elasticsearch
+  namespace: kube-system
+  labels:
+    k8s-app: fluentd-logging
+spec:
+  selector:
+    matchLabels:
+      name: fluentd-elasticsearch
+  template:
+    metadata:
+      labels:
+        name: fluentd-elasticsearch
+    spec:
+      tolerations:
+      - key: node-role.kubernetes.io/control-plane
+        operator: Exists
+        effect: NoSchedule
+      - key: node-role.kubernetes.io/master
+        operator: Exists
+        effect: NoSchedule
+      initContainers:
+        - name: init-config
+          image: busybox:1.35
+          command:
+            - sh
+            - -c
+            - |
+              cat << 'EOF' > /tmp/fluent/fluent.conf
+              <source>
+                @type tail
+                path /var/log/containers/*log-producer*.log
+                pos_file /var/log/fluentd-containers.log.pos
+                tag my.logs
+                read_from_head true
+                <parse>
+                  @type none
+                </parse>
+              </source>
+              
+              <match my.logs>
+                @type file
+                path /var/log/fluentd-buffers/my-logs
+                append true
+                <buffer>
+                  flush_mode interval
+                  flush_interval 5s
+                </buffer>
+              </match>
+              EOF
+          volumeMounts:
+            - name: config-volume
+              mountPath: /tmp/fluent
+      containers:
+        - name: fluentd-elasticsearch
+          image: quay.io/fluentd_elasticsearch/fluentd:v5.0.1
+          resources:
+            limits:
+              memory: 200Mi
+            requests:
+              cpu: 100m
+              memory: 200Mi
+          volumeMounts:
+          - name: varlog
+            mountPath: /var/log
+          - name: varlibdockercontainers
+            mountPath: /var/lib/docker/containers
+            readOnly: true
+          - name: ds-logs-storage
+            mountPath: /var/log/fluentd-buffers
+          - name: config-volume
+            mountPath: /etc/fluent/fluent.conf
+            subPath: fluent.conf
+      volumes:
+      - name: varlog
+        hostPath:
+          path: /var/log
+      - name: varlibdockercontainers
+        hostPath:
+          path: /var/lib/docker/containers
+      - name: ds-logs-storage
+        hostPath:
+          path: /mnt/data/ds-logs
+          type: DirectoryOrCreate
+      - name: config-volume
+        emptyDir: {}
